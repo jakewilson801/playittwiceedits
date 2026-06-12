@@ -140,6 +140,7 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     const trackId = urlParams.get("track_id");
+    const isSoundCloudReturn = urlParams.get("soundcloud_return") === "1";
 
     const messageEl = document.getElementById("message");
     const trackInfoEl = document.getElementById("trackInfo");
@@ -183,20 +184,33 @@
       const verifier = await generateCodeVerifier();
       sessionStorage.setItem(codeVerifierStorageKey, verifier);
       const challenge = await generateCodeChallenge(verifier);
-      const state = encodeURIComponent(btoa(JSON.stringify({ returnTo: window.location.href, code_verifier: verifier })));
+      const returnUrl = new URL(window.location.href);
+      returnUrl.searchParams.delete("soundcloud_return");
+      const state = encodeURIComponent(btoa(JSON.stringify({ returnTo: returnUrl.toString(), code_verifier: verifier })));
       return `https://secure.soundcloud.com/authorize?client_id=${encodeURIComponent(soundcloudClientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&code_challenge=${encodeURIComponent(challenge)}&code_challenge_method=S256&state=${state}`;
     }
 
+    function clearSoundCloudReturnFlag() {
+      if (!isSoundCloudReturn) return;
+      const params = new URLSearchParams(window.location.search);
+      params.delete("soundcloud_return");
+      const baseUrl = window.location.pathname + (params.toString() ? `?${params.toString()}` : "");
+      window.history.replaceState({}, "", baseUrl);
+    }
+
     async function autoStartAuthIfNeeded(track) {
-      if (track?.soundcloud_url && soundcloudAccessToken) {
-        messageEl.className = "success";
-        messageEl.textContent = "Verifying SoundCloud support...";
-        const result = await verifySoundCloudGate(track);
-        if (result.success) {
-          showConfirmation(track);
-        } else {
-          showFailure(result.message || "Couldn't verify SoundCloud support. Try again.");
-        }
+      if (!isSoundCloudReturn || !track?.soundcloud_url || !soundcloudAccessToken) {
+        return;
+      }
+
+      messageEl.className = "success";
+      messageEl.textContent = "Verifying SoundCloud support...";
+      const result = await verifySoundCloudGate(track);
+      clearSoundCloudReturnFlag();
+      if (result.success) {
+        showConfirmation(track);
+      } else {
+        showFailure(result.message || "Couldn't verify SoundCloud support. Try again.");
       }
     }
 

@@ -38,6 +38,13 @@
 
     const supabaseAnonKey = "sb_publishable_DhYH1BWEuY95SoP2TUUN4g_xj_BWcy_";
 
+    function addReturnFlag(returnTo) {
+      const url = new URL(returnTo || "/", window.location.origin);
+      url.searchParams.delete("soundcloud_return");
+      url.searchParams.set("soundcloud_return", "1");
+      return url.toString();
+    }
+
     async function finishSignIn(code, returnTo, stateData) {
       try {
         const redirectUri = window.location.origin + "/soundcloud-callback.html";
@@ -84,7 +91,8 @@
 
         sessionStorage.setItem("soundcloud_access_token", data.access_token);
         statusEl.textContent = "SoundCloud sign in successful. Redirecting...";
-        setTimeout(() => window.location.href = returnTo || "/", 750);
+        const redirectTarget = addReturnFlag(returnTo || "/");
+        setTimeout(() => window.location.href = redirectTarget, 750);
       } catch (err) {
         statusEl.className = "error";
         statusEl.textContent = err.message;
