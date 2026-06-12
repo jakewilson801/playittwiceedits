@@ -267,6 +267,10 @@
         if (response.status === 401) {
           sessionStorage.removeItem(storageKey);
           soundcloudAccessToken = null;
+          return { success: false, message: "SoundCloud session expired. Please sign in again." };
+        }
+        return { success: false, message: body.message || "Unable to verify SoundCloud repost and like." };
+      }
 
       const result = await response.json();
       const success = result.reposted && result.liked;
