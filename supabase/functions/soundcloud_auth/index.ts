@@ -7,18 +7,29 @@ if (!CLIENT_ID || !CLIENT_SECRET) {
   throw new Error("Missing SoundCloud client credentials.");
 }
 
+const CORS_HEADERS = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "OPTIONS, POST",
+  "Access-Control-Allow-Headers": "Content-Type"
+};
+
 serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  }
+
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ message: "Method not allowed." }), {
       status: 405,
-      headers: { "Content-Type": "application/json" }
+      headers: CORS_HEADERS
     });
   }
 
   try {
     const { code, redirect_uri } = await req.json();
     if (!code || !redirect_uri) {
-      return new Response(JSON.stringify({ message: "code and redirect_uri are required." }), { status: 400, headers: { "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ message: "code and redirect_uri are required." }), { status: 400, headers: CORS_HEADERS });
     }
 
     const response = await fetch("https://api.soundcloud.com/oauth2/token", {
@@ -35,12 +46,12 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorBody = await response.text();
-      return new Response(JSON.stringify({ message: `SoundCloud token exchange failed: ${errorBody}` }), { status: 500, headers: { "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ message: `SoundCloud token exchange failed: ${errorBody}` }), { status: 500, headers: CORS_HEADERS });
     }
 
     const tokenData = await response.json();
-    return new Response(JSON.stringify(tokenData), { status: 200, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify(tokenData), { status: 200, headers: CORS_HEADERS });
   } catch (error) {
-    return new Response(JSON.stringify({ message: error.message || "Unable to complete SoundCloud OAuth." }), { status: 500, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ message: error.message || "Unable to complete SoundCloud OAuth." }), { status: 500, headers: CORS_HEADERS });
   }
 });
