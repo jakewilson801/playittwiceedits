@@ -132,8 +132,8 @@
     const client = supabase.createClient(supabaseUrl, supabaseAnonKey);
     const soundcloudClientId = "KUCnjgzaLGQ27UcTymXuQvEQD8cBHV0I";
     const redirectUri = `${window.location.origin}/soundcloud-callback.html`;
-    const soundcloudAuthUrl = "https://<YOUR_PROJECT>.functions.supabase.co/soundcloud_auth";
-    const soundcloudRepostUrl = "https://<YOUR_PROJECT>.functions.supabase.co/soundcloud_repost";
+    const soundcloudAuthUrl = "https://rpfoydkxloozkirwgjcm.supabase.co/functions/v1/soundcloud_auth";
+    const soundcloudRepostUrl = "https://rpfoydkxloozkirwgjcm.supabase.co/functions/v1/soundcloud_repost";
     const storageKey = "soundcloud_access_token";
 
     const urlParams = new URLSearchParams(window.location.search);
