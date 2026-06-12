@@ -6,9 +6,7 @@
   <title>Play It Twice Records</title>
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -18,15 +16,9 @@
       line-height: 1.5;
     }
 
-    a {
-      color: inherit;
-      text-decoration: none;
-    }
+    a { color: inherit; text-decoration: none; }
 
-    .page {
-      min-height: 100vh;
-      padding: 24px;
-    }
+    .page { min-height: 100vh; padding: 24px; }
 
     .nav {
       max-width: 1100px;
@@ -53,7 +45,7 @@
       margin: 0 auto;
       padding: 90px 0 70px;
       display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
+      grid-template-columns: 1.15fr 0.85fr;
       gap: 48px;
       align-items: center;
     }
@@ -74,10 +66,14 @@
       margin: 0 0 24px;
     }
 
+    .hero p, .section p {
+      color: #cfcfcf;
+      font-size: 18px;
+    }
+
     .hero p {
       font-size: 20px;
       max-width: 560px;
-      color: #cfcfcf;
       margin-bottom: 32px;
     }
 
@@ -87,12 +83,14 @@
       flex-wrap: wrap;
     }
 
-    .button {
+    .button, button {
       display: inline-block;
       padding: 14px 20px;
       border-radius: 999px;
       font-weight: 700;
       font-size: 15px;
+      border: 0;
+      cursor: pointer;
     }
 
     .primary {
@@ -103,6 +101,7 @@
     .secondary {
       border: 1px solid #444;
       color: #f5f5f5;
+      background: transparent;
     }
 
     .card {
@@ -119,23 +118,35 @@
       letter-spacing: -0.04em;
     }
 
-    .track {
-      padding: 16px 0;
-      border-bottom: 1px solid #272727;
+    form {
+      display: grid;
+      gap: 12px;
+      margin-top: 20px;
     }
 
-    .track:last-child {
-      border-bottom: 0;
+    input {
+      width: 100%;
+      padding: 15px 16px;
+      border-radius: 14px;
+      border: 1px solid #333;
+      background: #0b0b0b;
+      color: #f5f5f5;
+      font-size: 16px;
     }
 
-    .track-title {
-      font-weight: 800;
+    input:focus {
+      outline: none;
+      border-color: #b6ff4a;
     }
 
-    .track-artist {
-      color: #aaa;
+    .message {
+      min-height: 24px;
       font-size: 14px;
+      color: #aaa;
     }
+
+    .success { color: #b6ff4a; }
+    .error { color: #ff6b6b; }
 
     .section {
       max-width: 1100px;
@@ -149,12 +160,6 @@
       letter-spacing: -0.06em;
       line-height: 1;
       margin: 0 0 18px;
-    }
-
-    .section p {
-      color: #cfcfcf;
-      font-size: 18px;
-      max-width: 680px;
     }
 
     .grid {
@@ -192,20 +197,9 @@
     }
 
     @media (max-width: 800px) {
-      .hero {
-        grid-template-columns: 1fr;
-        padding: 60px 0;
-      }
-
-      .grid {
-        grid-template-columns: 1fr;
-      }
-
-      .nav {
-        align-items: flex-start;
-        gap: 16px;
-        flex-direction: column;
-      }
+      .hero { grid-template-columns: 1fr; padding: 60px 0; }
+      .grid { grid-template-columns: 1fr; }
+      .nav { align-items: flex-start; gap: 16px; flex-direction: column; }
     }
   </style>
 </head>
@@ -214,7 +208,7 @@
   <div class="page">
     <nav class="nav">
       <div class="logo">Play It Twice Records</div>
-      <a href="#submit">Submit Music</a>
+      <a href="#signup">Join the Pool</a>
     </nav>
 
     <main class="hero">
@@ -227,28 +221,30 @@
         </p>
 
         <div class="buttons">
-          <a class="button primary" href="#tracks">Browse Tracks</a>
+          <a class="button primary" href="#signup">Join the Pool</a>
           <a class="button secondary" href="#submit">Submit Music</a>
         </div>
       </section>
 
-      <aside class="card" id="tracks">
-        <h2>Latest Tracks</h2>
+      <aside class="card" id="signup">
+        <h2>Create your account</h2>
+        <p>Drop your email and we’ll send you a magic sign-in link.</p>
 
-        <div class="track">
-          <div class="track-title">Track Title</div>
-          <div class="track-artist">Artist Name</div>
-        </div>
+        <form id="signup-form">
+          <input
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            autocomplete="email"
+            required
+          />
 
-        <div class="track">
-          <div class="track-title">Track Title</div>
-          <div class="track-artist">Artist Name</div>
-        </div>
+          <button class="primary" type="submit">
+            Send Magic Link
+          </button>
 
-        <div class="track">
-          <div class="track-title">Track Title</div>
-          <div class="track-artist">Artist Name</div>
-        </div>
+          <div id="signup-message" class="message"></div>
+        </form>
       </aside>
     </main>
 
@@ -280,13 +276,11 @@
     <section class="section" id="submit">
       <h2>Submit a record.</h2>
       <p>
-        Got something worth playing? Share your track with the community.
+        Once your account is created, you’ll be able to submit tracks to the pool.
       </p>
 
       <div class="buttons">
-        <a class="button primary" href="mailto:playittwicerecords@gmail.com">
-          Submit Music
-        </a>
+        <a class="button primary" href="#signup">Create Account</a>
         <a class="button secondary" href="https://instagram.com/playittwicerecords" target="_blank">
           Follow on Instagram
         </a>
@@ -297,5 +291,59 @@
       © 2026 Play It Twice Records. Discover. Share. Repeat.
     </footer>
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    const supabaseUrl = "https://rpfoydkxloozkirwgjcm.supabase.co";
+    const supabaseAnonKey = "sb_publishable_DhYH1BWEuY95SoP2TUUN4g_xj_BWcy_";
+
+    const supabase = window.supabase.createClient(
+      supabaseUrl,
+      supabaseAnonKey
+    );
+
+    const form = document.getElementById("signup-form");
+    const emailInput = document.getElementById("email");
+    const message = document.getElementById("signup-message");
+
+    function isValidEmail(email) {
+      return email.includes("@") && email.includes(".");
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const email = emailInput.value.trim().toLowerCase();
+
+      message.className = "message";
+      message.textContent = "";
+
+      if (!isValidEmail(email)) {
+        message.classList.add("error");
+        message.textContent = "Enter a valid email.";
+        return;
+      }
+
+      message.textContent = "Sending magic link...";
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: window.location.origin
+        }
+      });
+
+      if (error) {
+        message.classList.add("error");
+        message.textContent = error.message;
+        return;
+      }
+
+      message.classList.add("success");
+      message.textContent = "Check your email for the sign-in link.";
+      form.reset();
+    });
+  </script>
 </body>
 </html>
