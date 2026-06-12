@@ -60,21 +60,27 @@ async function resolveSoundCloudUrl(url: string, accessToken: string) {
 }
 
 async function checkUserRepost(trackId: string, accessToken: string) {
-  const response = await fetch(`https://api-v2.soundcloud.com/me/reposts?limit=200`, {
+  const trackUrn = `soundcloud:tracks:${trackId}`;
+  const response = await fetch(`https://api.soundcloud.com/reposts/tracks/${encodeURIComponent(trackUrn)}`, {
+    method: "POST",
     headers: {
       "Accept": "application/json; charset=utf-8",
       "Authorization": `OAuth ${accessToken}`
     }
   });
-  if (!response.ok) {
-    if (response.status === 401) {
-      throw new Error("Unauthorized. Please sign in again.");
-    }
-    const text = await response.text().catch(() => "");
-    throw new Error(`Unable to fetch user reposts from SoundCloud. (${response.status}) ${text}`);
+
+  if (response.ok) {
+    return true;
   }
 
-  const reposts = await response.json();
-  const items = reposts.collection || reposts || [];
-  return items.some((item: any) => item.track?.id === trackId || item.track_id === trackId || item.track?.urn?.includes(String(trackId)));
+  if (response.status === 401) {
+    throw new Error("Unauthorized. Please sign in again.");
+  }
+
+  if (response.status === 409 || response.status === 422) {
+    return true;
+  }
+
+  const text = await response.text().catch(() => "");
+  throw new Error(`Unable to repost track on SoundCloud. (${response.status}) ${text}`);
 }

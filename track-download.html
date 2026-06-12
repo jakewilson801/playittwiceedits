@@ -279,6 +279,8 @@
           messageEl.textContent = result.message;
           return;
         }
+        messageEl.className = "success";
+        messageEl.textContent = result.message || "SoundCloud repost verified. Download ready.";
       } else {
         if (!email) {
           messageEl.textContent = "Please enter your email.";
@@ -299,8 +301,10 @@
       }
 
       const downloadUrl = buildDropboxDownloadUrl(track.dropbox_url);
-      messageEl.className = "success";
-      messageEl.textContent = "Download ready — click the button below.";
+      if (!track.soundcloud_url) {
+        messageEl.className = "success";
+        messageEl.textContent = "Download ready — click the button below.";
+      }
 
       const button = document.createElement("a");
       button.href = downloadUrl;
