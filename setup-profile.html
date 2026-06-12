@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Setup Artist Profile | Play It Twice Records</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #0b0b0b;
+      color: #f5f5f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 520px;
+      background: #151515;
+      border: 1px solid #2a2a2a;
+      border-radius: 18px;
+      padding: 32px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 32px;
+    }
+
+    p {
+      margin: 0 0 24px;
+      color: #bdbdbd;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: 1px solid #333;
+      background: #0f0f0f;
+      color: #fff;
+      font-size: 16px;
+      margin-bottom: 18px;
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+
+    .slug-preview {
+      color: #9dffb0;
+      font-size: 14px;
+      margin-top: -8px;
+      margin-bottom: 18px;
+      word-break: break-word;
+    }
+
+    details {
+      margin: 8px 0 22px;
+    }
+
+    summary {
+      cursor: pointer;
+      color: #f5f5f5;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    button {
+      width: 100%;
+      border: 0;
+      border-radius: 999px;
+      padding: 15px 18px;
+      background: #f5f5f5;
+      color: #0b0b0b;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .error {
+      margin-top: 16px;
+      color: #ff7373;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="card">
+    <h1>Create your artist profile</h1>
+    <p>This helps us personalize your dashboard and track submissions.</p>
+
+    <form id="profileForm">
+      <label for="artistName">Artist Name *</label>
+      <input id="artistName" type="text" required placeholder="Jacob Flint" />
+
+      <div id="slugPreview" class="slug-preview"></div>
+
+      <label for="instagramHandle">Instagram Handle</label>
+      <input id="instagramHandle" type="text" placeholder="@iamjacobflint" />
+
+      <details>
+        <summary>Add socials</summary>
+
+        <label for="spotifyUrl">Spotify URL</label>
+        <input id="spotifyUrl" type="url" placeholder="https://open.spotify.com/artist/..." />
+
+        <label for="soundcloudUrl">SoundCloud URL</label>
+        <input id="soundcloudUrl" type="url" placeholder="https://soundcloud.com/..." />
+
+        <label for="tiktokHandle">TikTok Handle</label>
+        <input id="tiktokHandle" type="text" placeholder="@iamjacobflint" />
+
+        <label for="bio">Bio</label>
+        <textarea id="bio" placeholder="Short artist bio..."></textarea>
+      </details>
+
+      <button id="submitButton" type="submit">Create Profile</button>
+
+      <div id="errorMessage" class="error"></div>
+    </form>
+  </main>
+
+  <script>
+    const SUPABASE_URL = "YOUR_SUPABASE_URL";
+    const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+
+    const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const form = document.getElementById("profileForm");
+    const artistNameInput = document.getElementById("artistName");
+    const slugPreview = document.getElementById("slugPreview");
+    const errorMessage = document.getElementById("errorMessage");
+    const submitButton = document.getElementById("submitButton");
+
+    function makeSlug(value) {
+      return value
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-");
+    }
+
+    function cleanHandle(value) {
+      return value.trim().replace(/^@/, "");
+    }
+
+    artistNameInput.addEventListener("input", () => {
+      const slug = makeSlug(artistNameInput.value);
+
+      slugPreview.textContent = slug
+        ? `playittwicerecs.com/${slug}`
+        : "";
+    });
+
+    async function requireUser() {
+      const { data, error } = await client.auth.getUser();
+
+      if (error || !data.user) {
+        window.location.href = "/login.html";
+        return null;
+      }
+
+      return data.user;
+    }
+
+    async function redirectIfProfileExists(userId) {
+      const { data, error } = await client
+        .from("profiles")
+        .select("id")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        window.location.href = "/dashboard.html";
+      }
+    }
+
+    async function init() {
+      const user = await requireUser();
+      if (!user) return;
+
+      await redirectIfProfileExists(user.id);
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      errorMessage.textContent = "";
+      submitButton.disabled = true;
+      submitButton.textContent = "Creating...";
+
+      try {
+        const user = await requireUser();
+        if (!user) return;
+
+        const artistName = artistNameInput.value.trim();
+        const slug = makeSlug(artistName);
+
+        if (!artistName || !slug) {
+          throw new Error("Artist name is required.");
+        }
+
+        const profile = {
+          id: user.id,
+          slug,
+          artist_name: artistName,
+          instagram_handle: cleanHandle(document.getElementById("instagramHandle").value),
+          tiktok_handle: cleanHandle(document.getElementById("tiktokHandle").value),
+          soundcloud_url: document.getElementById("soundcloudUrl").value.trim(),
+          spotify_url: document.getElementById("spotifyUrl").value.trim(),
+          bio: document.getElementById("bio").value.trim()
+        };
+
+        const { error } = await client
+          .from("profiles")
+          .insert(profile);
+
+        if (error) throw error;
+
+        window.location.href = "/dashboard.html";
+      } catch (error) {
+        errorMessage.textContent = error.message;
+        submitButton.disabled = false;
+        submitButton.textContent = "Create Profile";
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>

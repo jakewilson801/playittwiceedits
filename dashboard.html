@@ -163,40 +163,70 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
-    const supabaseUrl = "https://rpfoydkxloozkirwgjcm.supabase.co";
-    const supabaseAnonKey = "sb_publishable_DhYH1BWEuY95SoP2TUUN4g_xj_BWcy_";
+ const supabaseUrl = "https://rpfoydkxloozkirwgjcm.supabase.co";
+  const supabaseAnonKey = "sb_publishable_DhYH1BWEuY95SoP2TUUN4g_xj_BWcy_";
 
-    const supabaseClient = window.supabase.createClient(
-      supabaseUrl,
-      supabaseAnonKey
-    );
+  const supabaseClient = window.supabase.createClient(
+    supabaseUrl,
+    supabaseAnonKey
+  );
 
-    const emailEl = document.getElementById("email");
-    const messageEl = document.getElementById("message");
-    const logoutButton = document.getElementById("logout-button");
+  const emailEl = document.getElementById("email");
+  const messageEl = document.getElementById("message");
+  const logoutButton = document.getElementById("logout-button");
+  const artistNameEl = document.getElementById("artistName");
 
-    async function loadDashboard() {
-      const {
-        data: { user },
-        error
-      } = await supabaseClient.auth.getUser();
+  async function loadDashboard() {
+    const {
+      data: { user },
+      error: userError
+    } = await supabaseClient.auth.getUser();
 
-      if (error || !user) {
-        window.location.href = "/";
-        return;
-      }
+    if (userError || !user) {
+      window.location.href = "/";
+      return;
+    }
 
+    const { data: profile, error: profileError } = await supabaseClient
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error(profileError);
+      messageEl.className = "message error";
+      messageEl.textContent = "Could not load your artist profile.";
+      return;
+    }
+
+    if (!profile) {
+      window.location.href = "/setup-profile.html";
+      return;
+    }
+
+    if (emailEl) {
       emailEl.textContent = user.email;
+    }
+
+    if (artistNameEl) {
+      artistNameEl.textContent = profile.artist_name;
+    }
+
+    if (messageEl) {
       messageEl.className = "message success";
       messageEl.textContent = "You are logged in.";
     }
+  }
 
+  if (logoutButton) {
     logoutButton.addEventListener("click", async () => {
       await supabaseClient.auth.signOut();
       window.location.href = "/";
     });
+  }
 
-    loadDashboard();
+  loadDashboard();
   </script>
 </body>
 </html>
