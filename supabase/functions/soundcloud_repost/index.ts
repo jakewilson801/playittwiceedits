@@ -38,23 +38,43 @@ serve(async (req) => {
   }
 });
 
+function normalizeSoundCloudUrl(url: string) {
+  const trimmed = url.trim();
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
 async function resolveSoundCloudUrl(url: string, accessToken: string) {
-  const response = await fetch(`https://api.soundcloud.com/resolve?url=${encodeURIComponent(url)}&oauth_token=${encodeURIComponent(accessToken)}`);
+  const normalizedUrl = normalizeSoundCloudUrl(url);
+  const response = await fetch(`https://api.soundcloud.com/resolve?url=${encodeURIComponent(normalizedUrl)}`, {
+    headers: {
+      "Accept": "application/json; charset=utf-8",
+      "Authorization": `OAuth ${accessToken}`
+    }
+  });
   if (!response.ok) {
-    throw new Error("SoundCloud URL could not be resolved.");
+    const text = await response.text().catch(() => "");
+    throw new Error(`SoundCloud URL could not be resolved. (${response.status}) ${text}`);
   }
   return response.json();
 }
 
 async function checkUserRepost(trackId: string, accessToken: string) {
-  const response = await fetch(`https://api-v2.soundcloud.com/me/reposts?oauth_token=${encodeURIComponent(accessToken)}`);
+  const response = await fetch(`https://api-v2.soundcloud.com/me/reposts?limit=200`, {
+    headers: {
+      "Accept": "application/json; charset=utf-8",
+      "Authorization": `OAuth ${accessToken}`
+    }
+  });
   if (!response.ok) {
     if (response.status === 401) {
       throw new Error("Unauthorized. Please sign in again.");
     }
-    throw new Error("Unable to fetch user reposts from SoundCloud.");
+    const text = await response.text().catch(() => "");
+    throw new Error(`Unable to fetch user reposts from SoundCloud. (${response.status}) ${text}`);
   }
 
   const reposts = await response.json();
-  return (reposts.collection || []).some((item: any) => item.track?.id === trackId || item.track_id === trackId);
+  const items = reposts.collection || reposts || [];
+  return items.some((item: any) => item.track?.id === trackId || item.track_id === trackId || item.track?.urn?.includes(String(trackId)));
 }
