@@ -208,14 +208,12 @@
         emailWrapper.style.display = "none";
         instagramWrapper.style.display = "none";
         tiktokWrapper.style.display = "none";
-        soundcloudAuthWrapper.style.display = "block";
         emailInput.required = false;
       } else {
         repostNotice.style.display = "none";
         emailWrapper.style.display = "block";
         instagramWrapper.style.display = "block";
         tiktokWrapper.style.display = "block";
-        soundcloudAuthWrapper.style.display = "none";
         emailInput.required = true;
       }
 
@@ -243,7 +241,6 @@
 
       currentTrack = { ...data, artist_name: profile?.artist_name || "Unknown artist" };
       renderGateMode(!!data.soundcloud_url);
-      updateAuthStatus();
       return currentTrack;
     }
 
@@ -270,11 +267,6 @@
         if (response.status === 401) {
           sessionStorage.removeItem(storageKey);
           soundcloudAccessToken = null;
-          updateAuthStatus();
-          return { success: false, message: "SoundCloud session expired. Please sign in again." };
-        }
-        return { success: false, message: body.message || "Unable to verify SoundCloud repost and like." };
-      }
 
       const result = await response.json();
       const success = result.reposted && result.liked;
