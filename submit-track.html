@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Submit Track | Play It Twice Records</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #0b0b0b;
+      color: #f5f5f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 520px;
+      background: #151515;
+      border: 1px solid #2a2a2a;
+      border-radius: 18px;
+      padding: 32px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 32px;
+    }
+
+    p {
+      margin: 0 0 24px;
+      color: #bdbdbd;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: 1px solid #333;
+      background: #0f0f0f;
+      color: #fff;
+      font-size: 16px;
+      margin-bottom: 18px;
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+
+    button {
+      width: 100%;
+      border: 0;
+      border-radius: 999px;
+      padding: 15px 18px;
+      background: #f5f5f5;
+      color: #0b0b0b;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .error {
+      margin-top: 16px;
+      color: #ff7373;
+      font-size: 14px;
+    }
+
+    .meta-link {
+      display: inline-block;
+      margin-top: 20px;
+      color: #9dffb0;
+      text-decoration: none;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="card">
+    <h1>Submit a track</h1>
+    <p>Share your latest DJ-ready record with the pool. Drop a Dropbox link and we’ll gate downloads with a quick contact form.</p>
+
+    <form id="trackForm">
+      <label for="trackTitle">Track Title *</label>
+      <input id="trackTitle" type="text" required placeholder="Track name" />
+
+      <label for="genre">Genre</label>
+      <input id="genre" type="text" placeholder="House, Techno, Breaks..." />
+
+      <label for="dropboxUrl">Dropbox URL *</label>
+      <input id="dropboxUrl" type="url" required placeholder="https://www.dropbox.com/s/..." />
+
+      <button id="submitButton" type="submit">Submit Track</button>
+      <div id="errorMessage" class="error"></div>
+    </form>
+
+    <a class="meta-link" href="/dashboard.html">← Back to Dashboard</a>
+  </main>
+
+  <script>
+    const supabaseUrl = "https://rpfoydkxloozkirwgjcm.supabase.co";
+    const supabaseAnonKey = "sb_publishable_DhYH1BWEuY95SoP2TUUN4g_xj_BWcy_";
+
+    const client = supabase.createClient(supabaseUrl, supabaseAnonKey);
+    const form = document.getElementById("trackForm");
+    const errorMessage = document.getElementById("errorMessage");
+    const submitButton = document.getElementById("submitButton");
+
+    async function requireUser() {
+      const { data, error } = await client.auth.getUser();
+      if (error || !data.user) {
+        window.location.href = "/";
+        return null;
+      }
+      return data.user;
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      errorMessage.textContent = "";
+      submitButton.disabled = true;
+      submitButton.textContent = "Submitting...";
+
+      try {
+        const user = await requireUser();
+        if (!user) return;
+
+        const trackTitle = document.getElementById("trackTitle").value.trim();
+        const genre = document.getElementById("genre").value.trim();
+        const dropboxUrl = document.getElementById("dropboxUrl").value.trim();
+
+        if (!trackTitle || !dropboxUrl) {
+          throw new Error("Track title and Dropbox URL are required.");
+        }
+
+        const { error } = await client.from("tracks").insert({
+          user_id: user.id,
+          track_title: trackTitle,
+          genre,
+          dropbox_url: dropboxUrl
+        });
+
+        if (error) throw error;
+        window.location.href = "/dashboard.html";
+      } catch (error) {
+        errorMessage.textContent = error.message;
+        submitButton.disabled = false;
+        submitButton.textContent = "Submit Track";
+      }
+    });
+  </script>
+</body>
+</html>

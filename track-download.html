@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Download Track | Play It Twice Records</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #0b0b0b;
+      color: #f5f5f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 560px;
+      background: #151515;
+      border: 1px solid #2a2a2a;
+      border-radius: 18px;
+      padding: 32px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 32px;
+    }
+
+    p {
+      margin: 0 0 24px;
+      color: #bdbdbd;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    input {
+      width: 100%;
+      padding: 14px;
+      border-radius: 10px;
+      border: 1px solid #333;
+      background: #0f0f0f;
+      color: #fff;
+      font-size: 16px;
+      margin-bottom: 18px;
+    }
+
+    .button {
+      width: 100%;
+      display: inline-block;
+      border: 0;
+      border-radius: 999px;
+      padding: 15px 18px;
+      background: #f5f5f5;
+      color: #0b0b0b;
+      font-size: 16px;
+      font-weight: 800;
+      text-align: center;
+      text-decoration: none;
+      margin-top: 18px;
+    }
+
+    .error {
+      margin-top: 16px;
+      color: #ff7373;
+      font-size: 14px;
+    }
+
+    .success {
+      margin-top: 16px;
+      color: #b6ff4a;
+      font-size: 14px;
+    }
+
+    .meta-link {
+      display: inline-block;
+      margin-top: 20px;
+      color: #9dffb0;
+      text-decoration: none;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="card">
+    <h1>Unlock the download</h1>
+    <p id="trackInfo">Loading track details...</p>
+
+    <form id="downloadForm">
+      <label for="email">Your email *</label>
+      <input id="email" type="email" required placeholder="you@example.com" />
+
+      <label for="instagramHandle">Instagram Handle</label>
+      <input id="instagramHandle" type="text" placeholder="@yourhandle" />
+
+      <label for="tiktokHandle">TikTok Handle</label>
+      <input id="tiktokHandle" type="text" placeholder="@yourhandle" />
+
+      <button type="submit">Get Download Link</button>
+      <div id="message" class="error"></div>
+    </form>
+
+    <a class="meta-link" href="/">← Back to home</a>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const supabaseUrl = "https://rpfoydkxloozkirwgjcm.supabase.co";
+    const supabaseAnonKey = "sb_publishable_DhYH1BWEuY95SoP2TUUN4g_xj_BWcy_";
+    const client = supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const trackId = urlParams.get("track_id");
+
+    const messageEl = document.getElementById("message");
+    const trackInfoEl = document.getElementById("trackInfo");
+    const form = document.getElementById("downloadForm");
+
+    if (!trackId) {
+      trackInfoEl.textContent = "Track not found.";
+      form.style.display = "none";
+    }
+
+    async function fetchTrack() {
+      const { data, error } = await client
+        .from("tracks")
+        .select("*")
+        .eq("id", trackId)
+        .maybeSingle();
+
+      if (error || !data) {
+        trackInfoEl.textContent = "Track not found.";
+        form.style.display = "none";
+        return null;
+      }
+
+      return data;
+    }
+
+    function buildDropboxDownloadUrl(dropboxUrl) {
+      if (dropboxUrl.includes("dl=0")) {
+        return dropboxUrl.replace("dl=0", "dl=1");
+      }
+      if (dropboxUrl.includes("www.dropbox.com")) {
+        return dropboxUrl.replace("www.dropbox.com", "dl.dropboxusercontent.com");
+      }
+      return dropboxUrl;
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      messageEl.textContent = "";
+      messageEl.className = "error";
+
+      const email = document.getElementById("email").value.trim();
+      const instagramHandle = document.getElementById("instagramHandle").value.trim();
+      const tiktokHandle = document.getElementById("tiktokHandle").value.trim();
+
+      if (!email) {
+        messageEl.textContent = "Please enter your email.";
+        return;
+      }
+
+      const track = await fetchTrack();
+      if (!track) return;
+
+      const { error: saveError } = await client.from("downloads").insert({
+        track_id: trackId,
+        email,
+        instagram_handle: instagramHandle,
+        tiktok_handle: tiktokHandle
+      });
+
+      if (saveError) {
+        messageEl.textContent = "Unable to register download. Try again later.";
+        return;
+      }
+
+      const downloadUrl = buildDropboxDownloadUrl(track.dropbox_url);
+      messageEl.className = "success";
+      messageEl.textContent = "Download ready — click the button below.";
+
+      const button = document.createElement("a");
+      button.href = downloadUrl;
+      button.className = "button";
+      button.textContent = "Download Now";
+      button.target = "_blank";
+      form.after(button);
+      form.remove();
+    });
+
+    fetchTrack().then((track) => {
+      if (!track) return;
+      trackInfoEl.textContent = `${track.track_title} — ${track.genre || "No genre specified"}`;
+    });
+  </script>
+</body>
+</html>

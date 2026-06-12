@@ -148,13 +148,14 @@
         <h2>Your Account</h2>
         <p id="email">Loading...</p>
         <p id="artistName"></p>
+        <div id="trackSummary" class="message"></div>
         <div id="message" class="message"></div>
 
         <a id="profile-button" class="button" href="/setup-profile.html">
           Loading...
         </a>
-        <a class="button" href="/setup-profile.html">
-          Set Up Artist Profile
+        <a id="submit-track-button" class="button" href="/submit-track.html">
+          Submit a Track
         </a>
       </aside>
     </main>
@@ -216,6 +217,22 @@
         }
 
         return;
+      }
+
+      const { data: tracks, error: tracksError } = await supabaseClient
+        .from("tracks")
+        .select("track_title")
+        .eq("user_id", user.id);
+
+      if (tracksError) {
+        console.error(tracksError);
+      }
+
+      if (trackSummary) {
+        const count = tracks ? tracks.length : 0;
+        trackSummary.textContent = count
+          ? `You’ve submitted ${count} track${count === 1 ? "" : "s"}.`
+          : "You haven’t submitted any tracks yet.";
       }
 
       if (!profile) {
