@@ -298,7 +298,7 @@
     const supabaseUrl = "https://rpfoydkxloozkirwgjcm.supabase.co";
     const supabaseAnonKey = "sb_publishable_DhYH1BWEuY95SoP2TUUN4g_xj_BWcy_";
 
-    const supabase = window.supabase.createClient(
+    const supabaseClient = window.supabase.createClient(
       supabaseUrl,
       supabaseAnonKey
     );
@@ -327,7 +327,7 @@
 
       message.textContent = "Sending magic link...";
 
-      const { error } = await supabase.auth.signInWithOtp({
+      const { error } = await supabaseClient.auth.signInWithOtp({
         email,
         options: {
           emailRedirectTo: window.location.origin
