@@ -135,6 +135,7 @@
     const soundcloudAuthUrl = "https://rpfoydkxloozkirwgjcm.supabase.co/functions/v1/soundcloud_auth";
     const soundcloudRepostUrl = "https://rpfoydkxloozkirwgjcm.supabase.co/functions/v1/soundcloud_repost";
     const storageKey = "soundcloud_access_token";
+    const codeVerifierStorageKey = "soundcloud_code_verifier";
 
     const urlParams = new URLSearchParams(window.location.search);
     const trackId = urlParams.get("track_id");
@@ -170,9 +171,31 @@
       }
     }
 
-    function getSoundCloudConnectUrl() {
+    async function generateCodeVerifier() {
+      const array = new Uint8Array(96);
+      crypto.getRandomValues(array);
+      return btoa(String.fromCharCode(...array))
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "");
+    }
+
+    async function generateCodeChallenge(verifier) {
+      const data = new TextEncoder().encode(verifier);
+      const digest = await crypto.subtle.digest("SHA-256", data);
+      const bytes = new Uint8Array(digest);
+      return btoa(String.fromCharCode(...bytes))
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "");
+    }
+
+    async function getSoundCloudConnectUrl() {
       const state = encodeURIComponent(btoa(JSON.stringify({ returnTo: window.location.href })));
-      return `https://soundcloud.com/connect?client_id=${encodeURIComponent(soundcloudClientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=non-expiring&state=${state}`;
+      const verifier = await generateCodeVerifier();
+      sessionStorage.setItem(codeVerifierStorageKey, verifier);
+      const challenge = await generateCodeChallenge(verifier);
+      return `https://secure.soundcloud.com/authorize?client_id=${encodeURIComponent(soundcloudClientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&code_challenge=${encodeURIComponent(challenge)}&code_challenge_method=S256&state=${state}`;
     }
 
     function updateAuthStatus() {
@@ -183,8 +206,8 @@
       }
     }
 
-    authButton.addEventListener("click", () => {
-      window.location.href = getSoundCloudConnectUrl();
+    authButton.addEventListener("click", async () => {
+      window.location.href = await getSoundCloudConnectUrl();
     });
 
     async function fetchTrack() {

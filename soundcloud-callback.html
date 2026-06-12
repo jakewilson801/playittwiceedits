@@ -16,14 +16,17 @@
   <main class="card">
     <h1>Finishing SoundCloud sign in</h1>
     <p id="status" class="loading">Please wait...</p>
+    <pre id="debug" style="margin-top:20px; text-align:left; white-space:pre-wrap; color:#ccc; font-size:13px;"></pre>
   </main>
 
   <script>
     const statusEl = document.getElementById("status");
+    const debugEl = document.getElementById("debug");
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
     const state = params.get("state");
     const error = params.get("error");
+    const codeVerifierStorageKey = "soundcloud_code_verifier";
 
     function decodeState(stateValue) {
       try {
@@ -37,6 +40,14 @@
 
     async function finishSignIn(code, returnTo) {
       try {
+        const redirectUri = window.location.origin + "/soundcloud-callback.html";
+        const codeVerifier = sessionStorage.getItem(codeVerifierStorageKey);
+        debugEl.textContent = `Debug:\ncode=${code}\nredirect_uri=${redirectUri}\ncode_verifier=${codeVerifier ? "present" : "missing"}\n`;
+
+        if (!codeVerifier) {
+          throw new Error("Missing PKCE code verifier. Please restart the SoundCloud sign-in flow.");
+        }
+
         const response = await fetch("https://rpfoydkxloozkirwgjcm.supabase.co/functions/v1/soundcloud_auth", {
           method: "POST",
           headers: {
@@ -44,16 +55,25 @@
             "Authorization": `Bearer ${supabaseAnonKey}`,
             "apikey": supabaseAnonKey
           },
-          body: JSON.stringify({ code, redirect_uri: window.location.origin + "/soundcloud-callback.html" })
+          body: JSON.stringify({ code, redirect_uri: redirectUri, code_verifier: codeVerifier })
         });
 
+        const responseText = await response.text();
+        let body;
+        try {
+          body = JSON.parse(responseText);
+        } catch {
+          body = { raw: responseText };
+        }
+
         if (!response.ok) {
-          const body = await response.json().catch(() => ({}));
+          debugEl.textContent += `\nResponse status: ${response.status}\n${JSON.stringify(body, null, 2)}`;
           throw new Error(body.message || "Unable to complete SoundCloud sign in.");
         }
 
-        const data = await response.json();
+        const data = body;
         if (!data.access_token) {
+          debugEl.textContent += `\nMissing access token:\n${JSON.stringify(data, null, 2)}`;
           throw new Error("No access token returned from SoundCloud.");
         }
 

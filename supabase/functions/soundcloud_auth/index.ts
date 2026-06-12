@@ -27,21 +27,22 @@ serve(async (req) => {
   }
 
   try {
-    const { code, redirect_uri } = await req.json();
-    if (!code || !redirect_uri) {
-      return new Response(JSON.stringify({ message: "code and redirect_uri are required." }), { status: 400, headers: CORS_HEADERS });
+    const { code, redirect_uri, code_verifier } = await req.json();
+    if (!code || !redirect_uri || !code_verifier) {
+      return new Response(JSON.stringify({ message: "code, redirect_uri, and code_verifier are required." }), { status: 400, headers: CORS_HEADERS });
     }
 
-    const authHeader = `Basic ${btoa(`${CLIENT_ID}:${CLIENT_SECRET}`)}`;
-    const response = await fetch("https://api.soundcloud.com/oauth2/token", {
+    const response = await fetch("https://secure.soundcloud.com/oauth/token", {
       method: "POST",
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Authorization": authHeader
+        "Content-Type": "application/x-www-form-urlencoded"
       },
       body: new URLSearchParams({
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
         grant_type: "authorization_code",
         redirect_uri,
+        code_verifier,
         code
       })
     });
