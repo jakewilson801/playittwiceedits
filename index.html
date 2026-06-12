@@ -310,6 +310,15 @@
     function isValidEmail(email) {
       return email.includes("@") && email.includes(".");
     }
+    async function redirectIfLoggedIn() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+
+  if (session) {
+    window.location.href = "/dashboard.html";
+  }
+}
+
+redirectIfLoggedIn();
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
