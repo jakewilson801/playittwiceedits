@@ -188,7 +188,16 @@
     }
 
     async function autoStartAuthIfNeeded(track) {
-      return;
+      if (track?.soundcloud_url && soundcloudAccessToken) {
+        messageEl.className = "success";
+        messageEl.textContent = "Verifying SoundCloud support...";
+        const result = await verifySoundCloudGate(track);
+        if (result.success) {
+          showConfirmation(track);
+        } else {
+          showFailure(result.message || "Couldn't verify SoundCloud support. Try again.");
+        }
+      }
     }
 
     function setSupportActionText() {
@@ -364,13 +373,15 @@
     }
 
     function buildDropboxDownloadUrl(dropboxUrl) {
-      if (dropboxUrl.includes("dl=0")) {
-        return dropboxUrl.replace("dl=0", "dl=1");
+      if (!dropboxUrl) return "";
+      let url = dropboxUrl.replace(/&amp;/g, "&");
+      if (url.includes("dl=0")) {
+        return url.replace("dl=0", "dl=1");
       }
-      if (dropboxUrl.includes("www.dropbox.com")) {
-        return dropboxUrl.replace("www.dropbox.com", "dl.dropboxusercontent.com");
+      if (url.includes("www.dropbox.com")) {
+        return url.replace("www.dropbox.com", "dl.dropboxusercontent.com");
       }
-      return dropboxUrl;
+      return url;
     }
   </script>
 </body>
