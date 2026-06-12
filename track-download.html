@@ -348,6 +348,7 @@
     fetchTrack().then((track) => {
       if (!track) return;
       renderGateMode(!!track.soundcloud_url);
+      autoStartAuthIfNeeded(track);
     });
 
     tryAgainButton.addEventListener("click", () => {
