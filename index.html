@@ -330,7 +330,7 @@
       const { error } = await supabaseClient.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: window.location.origin
+          emailRedirectTo: "https://playittwicerecords.com"
         }
       });
 
