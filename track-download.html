@@ -107,19 +107,20 @@
         <input id="email" type="email" placeholder="you@example.com" />
       </div>
 
-      <div id="soundcloudAuth" style="display:none; margin-bottom: 18px;">
-        <button id="soundcloudLoginButton" type="button">Sign in with SoundCloud</button>
-        <div id="soundcloudStatus" style="margin-top: 12px; font-size: 14px; color: #b6ff4a;"></div>
+      <div id="instagramWrapper">
+        <label for="instagramHandle">Instagram Handle</label>
+        <input id="instagramHandle" type="text" placeholder="@yourhandle" />
       </div>
 
-      <label for="instagramHandle">Instagram Handle</label>
-      <input id="instagramHandle" type="text" placeholder="@yourhandle" />
+      <div id="tiktokWrapper">
+        <label for="tiktokHandle">TikTok Handle</label>
+        <input id="tiktokHandle" type="text" placeholder="@yourhandle" />
+      </div>
 
-      <label for="tiktokHandle">TikTok Handle</label>
-      <input id="tiktokHandle" type="text" placeholder="@yourhandle" />
-
-      <button type="submit">Get Download Link</button>
+      <button id="primaryAction" type="submit">Get Download Link</button>
       <div id="message" class="error"></div>
+      <button id="tryAgainButton" type="button" class="button" style="display:none; margin-top: 16px;">Try again</button>
+      <div id="confirmation" style="display:none; margin-top: 24px;"></div>
     </form>
 
     <a class="meta-link" href="/">← Back to home</a>
@@ -145,9 +146,11 @@
     const form = document.getElementById("downloadForm");
     const repostNotice = document.getElementById("repostNotice");
     const emailWrapper = document.getElementById("emailWrapper");
-    const soundcloudAuthWrapper = document.getElementById("soundcloudAuth");
-    const authButton = document.getElementById("soundcloudLoginButton");
-    const soundcloudStatus = document.getElementById("soundcloudStatus");
+    const instagramWrapper = document.getElementById("instagramWrapper");
+    const tiktokWrapper = document.getElementById("tiktokWrapper");
+    const primaryAction = document.getElementById("primaryAction");
+    const tryAgainButton = document.getElementById("tryAgainButton");
+    const confirmationEl = document.getElementById("confirmation");
     const emailInput = document.getElementById("email");
     let soundcloudAccessToken = sessionStorage.getItem(storageKey);
     let currentTrack = null;
@@ -212,11 +215,38 @@
     });
 
     async function autoStartAuthIfNeeded(track) {
-      if (track?.soundcloud_url && !soundcloudAccessToken) {
-        messageEl.className = "success";
-        messageEl.textContent = "Redirecting to SoundCloud sign in...";
-        window.location.href = await getSoundCloudConnectUrl();
+      return;
+    }
+
+    function setSupportActionText() {
+      primaryAction.textContent = currentTrack?.soundcloud_url ? "Like + repost on SoundCloud" : "Get Download Link";
+    }
+
+    function renderGateMode(soundcloudRequired) {
+      const artistText = currentTrack?.artist_name ? `${currentTrack.track_title} — ${currentTrack.artist_name}` : currentTrack?.track_title || "Loading track details...";
+      trackInfoEl.textContent = artistText;
+      confirmationEl.style.display = "none";
+      tryAgainButton.style.display = "none";
+      messageEl.textContent = "";
+
+      if (soundcloudRequired) {
+        repostNotice.textContent = "Support this release to unlock the download.";
+        repostNotice.style.display = "block";
+        emailWrapper.style.display = "none";
+        instagramWrapper.style.display = "none";
+        tiktokWrapper.style.display = "none";
+        soundcloudAuthWrapper.style.display = "block";
+        emailInput.required = false;
+      } else {
+        repostNotice.style.display = "none";
+        emailWrapper.style.display = "block";
+        instagramWrapper.style.display = "block";
+        tiktokWrapper.style.display = "block";
+        soundcloudAuthWrapper.style.display = "none";
+        emailInput.required = true;
       }
+
+      setSupportActionText();
     }
 
     async function fetchTrack() {
@@ -232,10 +262,16 @@
         return null;
       }
 
-      currentTrack = data;
-      setGateMode(!!data.soundcloud_url);
+      const { data: profile } = await client
+        .from("profiles")
+        .select("artist_name")
+        .eq("id", data.user_id)
+        .maybeSingle();
+
+      currentTrack = { ...data, artist_name: profile?.artist_name || "Unknown artist" };
+      renderGateMode(!!data.soundcloud_url);
       updateAuthStatus();
-      return data;
+      return currentTrack;
     }
 
     async function verifySoundCloudGate(track) {
@@ -277,6 +313,7 @@
       event.preventDefault();
       messageEl.textContent = "";
       messageEl.className = "error";
+      tryAgainButton.style.display = "none";
 
       const email = emailInput.value.trim();
       const instagramHandle = document.getElementById("instagramHandle").value.trim();
@@ -287,42 +324,40 @@
 
       if (track.soundcloud_url) {
         if (!soundcloudAccessToken) {
-          messageEl.textContent = "Please sign in with SoundCloud first.";
+          window.location.href = await getSoundCloudConnectUrl();
           return;
         }
 
         const result = await verifySoundCloudGate(track);
         if (!result.success) {
-          messageEl.textContent = result.message;
-          return;
-        }
-        messageEl.className = "success";
-        messageEl.textContent = result.message || "SoundCloud repost and like verified. Download ready.";
-      } else {
-        if (!email) {
-          messageEl.textContent = "Please enter your email.";
+          showFailure(result.message || "Couldn't verify SoundCloud support. Try again.");
           return;
         }
 
-        const { error: saveError } = await client.from("downloads").insert({
-          track_id: trackId,
-          email,
-          instagram_handle: instagramHandle,
-          tiktok_handle: tiktokHandle
-        });
+        showConfirmation(track);
+        return;
+      }
 
-        if (saveError) {
-          messageEl.textContent = "Unable to register download. Try again later.";
-          return;
-        }
+      if (!email) {
+        messageEl.textContent = "Please enter your email.";
+        return;
+      }
+
+      const { error: saveError } = await client.from("downloads").insert({
+        track_id: trackId,
+        email,
+        instagram_handle: instagramHandle,
+        tiktok_handle: tiktokHandle
+      });
+
+      if (saveError) {
+        messageEl.textContent = "Unable to register download. Try again later.";
+        return;
       }
 
       const downloadUrl = buildDropboxDownloadUrl(track.dropbox_url);
-      if (!track.soundcloud_url) {
-        messageEl.className = "success";
-        messageEl.textContent = "Download ready — click the button below.";
-      }
-
+      messageEl.className = "success";
+      messageEl.textContent = "Download ready — click the button below.";
       const button = document.createElement("a");
       button.href = downloadUrl;
       button.className = "button";
@@ -332,11 +367,32 @@
       form.remove();
     });
 
-    fetchTrack().then(async (track) => {
+    fetchTrack().then((track) => {
       if (!track) return;
-      trackInfoEl.textContent = `${track.track_title} — ${track.genre || "No genre specified"}`;
-      await autoStartAuthIfNeeded(track);
+      renderGateMode(!!track.soundcloud_url);
     });
+
+    tryAgainButton.addEventListener("click", () => {
+      messageEl.textContent = "";
+      messageEl.className = "";
+      tryAgainButton.style.display = "none";
+      renderGateMode(!!currentTrack?.soundcloud_url);
+    });
+
+    function showConfirmation(track) {
+      form.style.display = "none";
+      confirmationEl.style.display = "block";
+      confirmationEl.innerHTML = `
+        <p class="success">Thanks for supporting. Your download is ready.</p>
+        <a href="${buildDropboxDownloadUrl(track.dropbox_url)}" class="button" target="_blank">Download</a>
+      `;
+    }
+
+    function showFailure(message) {
+      messageEl.className = "error";
+      messageEl.textContent = message || "Couldn't verify SoundCloud support. Try again.";
+      tryAgainButton.style.display = "block";
+    }
 
     function buildDropboxDownloadUrl(dropboxUrl) {
       if (dropboxUrl.includes("dl=0")) {
