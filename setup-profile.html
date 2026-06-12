@@ -181,7 +181,7 @@
       const { data, error } = await client.auth.getUser();
 
       if (error || !data.user) {
-        window.location.href = "/login.html";
+        window.location.href = "/";
         return null;
       }
 
@@ -218,7 +218,11 @@
 
       try {
         const user = await requireUser();
-        if (!user) return;
+        if (!user) {
+          submitButton.disabled = false;
+          submitButton.textContent = "Create Profile";
+          return;
+        }
 
         const artistName = artistNameInput.value.trim();
         const slug = makeSlug(artistName);

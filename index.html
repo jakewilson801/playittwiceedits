@@ -339,7 +339,7 @@ redirectIfLoggedIn();
       const { error } = await supabaseClient.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: "https://playittwicerecs.com"
+          emailRedirectTo: window.location.origin + "/dashboard.html"
         }
       });
 
