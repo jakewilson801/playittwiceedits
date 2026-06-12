@@ -139,8 +139,8 @@
       <section>
         <div class="eyebrow">Dashboard</div>
         <h1>Welcome to the pool.</h1>
-        <p>
-          Your account is active. Next we’ll set up your artist profile and let you submit tracks.
+        <p id="dashboard-copy">
+          Loading your artist profile...
         </p>
       </section>
 
@@ -149,8 +149,8 @@
         <p id="email">Loading...</p>
         <div id="message" class="message"></div>
 
-        <a class="button" href="onboarding.html">
-          Set Up Artist Profile
+        <a id="profile-button" class="button" href="/setup-profile.html">
+          Loading...
         </a>
       </aside>
     </main>
@@ -163,70 +163,100 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
- const supabaseUrl = "https://rpfoydkxloozkirwgjcm.supabase.co";
-  const supabaseAnonKey = "sb_publishable_DhYH1BWEuY95SoP2TUUN4g_xj_BWcy_";
+    const supabaseUrl = "https://rpfoydkxloozkirwgjcm.supabase.co";
+    const supabaseAnonKey = "sb_publishable_DhYH1BWEuY95SoP2TUUN4g_xj_BWcy_";
 
-  const supabaseClient = window.supabase.createClient(
-    supabaseUrl,
-    supabaseAnonKey
-  );
+    const supabaseClient = window.supabase.createClient(
+      supabaseUrl,
+      supabaseAnonKey
+    );
 
-  const emailEl = document.getElementById("email");
-  const messageEl = document.getElementById("message");
-  const logoutButton = document.getElementById("logout-button");
-  const artistNameEl = document.getElementById("artistName");
+    const emailEl = document.getElementById("email");
+    const messageEl = document.getElementById("message");
+    const logoutButton = document.getElementById("logout-button");
+    const profileButton = document.getElementById("profile-button");
+    const dashboardCopy = document.getElementById("dashboard-copy");
 
-  async function loadDashboard() {
-    const {
-      data: { user },
-      error: userError
-    } = await supabaseClient.auth.getUser();
+    async function loadDashboard() {
+      const {
+        data: { user },
+        error: userError
+      } = await supabaseClient.auth.getUser();
 
-    if (userError || !user) {
-      window.location.href = "/";
-      return;
+      if (userError || !user) {
+        window.location.href = "/";
+        return;
+      }
+
+      if (emailEl) {
+        emailEl.textContent = user.email;
+      }
+
+      const { data: profile, error: profileError } = await supabaseClient
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error(profileError);
+
+        if (messageEl) {
+          messageEl.className = "message error";
+          messageEl.textContent = "Could not load your artist profile.";
+        }
+
+        if (profileButton) {
+          profileButton.textContent = "Try Setup Again";
+          profileButton.href = "/setup-profile.html";
+        }
+
+        return;
+      }
+
+      if (!profile) {
+        if (messageEl) {
+          messageEl.className = "message";
+          messageEl.textContent = "Finish setting up your artist profile.";
+        }
+
+        if (profileButton) {
+          profileButton.textContent = "Set Up Artist Profile";
+          profileButton.href = "/setup-profile.html";
+        }
+
+        if (dashboardCopy) {
+          dashboardCopy.textContent =
+            "Your account is active. Next we’ll set up your artist profile and let you submit tracks.";
+        }
+
+        return;
+      }
+
+      if (messageEl) {
+        messageEl.className = "message success";
+        messageEl.textContent = `Profile ready: ${profile.artist_name}`;
+      }
+
+      if (profileButton) {
+        profileButton.textContent = "View Artist Profile";
+        profileButton.href = `/artist.html?slug=${profile.slug}`;
+      }
+
+      if (dashboardCopy) {
+        dashboardCopy.textContent =
+          "Your artist profile is live. You can view your public profile or start submitting tracks.";
+      }
     }
 
-    const { data: profile, error: profileError } = await supabaseClient
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (profileError) {
-      console.error(profileError);
-      messageEl.className = "message error";
-      messageEl.textContent = "Could not load your artist profile.";
-      return;
+    if (logoutButton) {
+      logoutButton.addEventListener("click", async () => {
+        await supabaseClient.auth.signOut();
+        window.location.href = "/";
+      });
     }
 
-    if (!profile) {
-      window.location.href = "/setup-profile.html";
-      return;
-    }
-
-    if (emailEl) {
-      emailEl.textContent = user.email;
-    }
-
-    if (artistNameEl) {
-      artistNameEl.textContent = profile.artist_name;
-    }
-
-    if (messageEl) {
-      messageEl.className = "message success";
-      messageEl.textContent = "You are logged in.";
-    }
-  }
-
-  if (logoutButton) {
-    logoutButton.addEventListener("click", async () => {
-      await supabaseClient.auth.signOut();
-      window.location.href = "/";
-    });
-  }
-
-  loadDashboard();
+    loadDashboard();
   </script>
 </body>
 </html>
