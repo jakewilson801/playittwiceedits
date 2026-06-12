@@ -100,7 +100,7 @@
 <body>
   <main class="card">
     <h1>Submit a track</h1>
-    <p>Share your latest DJ-ready record with the pool. Drop a Dropbox link and we’ll gate downloads with a quick contact form.</p>
+    <p>Share your latest DJ-ready record with the pool. Drop a Dropbox link and we’ll gate downloads with a quick contact form. If you include a SoundCloud URL, downloads will require a SoundCloud repost instead of email collection.</p>
 
     <form id="trackForm">
       <label for="trackTitle">Track Title *</label>
@@ -111,6 +111,9 @@
 
       <label for="dropboxUrl">Dropbox URL *</label>
       <input id="dropboxUrl" type="url" required placeholder="https://www.dropbox.com/s/..." />
+
+      <label for="soundcloudUrl">SoundCloud URL</label>
+      <input id="soundcloudUrl" type="url" placeholder="https://soundcloud.com/..." />
 
       <button id="submitButton" type="submit">Submit Track</button>
       <div id="errorMessage" class="error"></div>
@@ -150,6 +153,7 @@
         const trackTitle = document.getElementById("trackTitle").value.trim();
         const genre = document.getElementById("genre").value.trim();
         const dropboxUrl = document.getElementById("dropboxUrl").value.trim();
+        const soundcloudUrl = document.getElementById("soundcloudUrl").value.trim();
 
         if (!trackTitle || !dropboxUrl) {
           throw new Error("Track title and Dropbox URL are required.");
@@ -159,7 +163,8 @@
           user_id: user.id,
           track_title: trackTitle,
           genre,
-          dropbox_url: dropboxUrl
+          dropbox_url: dropboxUrl,
+          soundcloud_url: soundcloudUrl
         });
 
         if (error) throw error;

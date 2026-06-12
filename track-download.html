@@ -100,8 +100,17 @@
     <p id="trackInfo">Loading track details...</p>
 
     <form id="downloadForm">
-      <label for="email">Your email *</label>
-      <input id="email" type="email" required placeholder="you@example.com" />
+      <div id="repostNotice" style="display:none; margin-bottom: 16px; color: #b6ff4a; font-size: 14px;"></div>
+
+      <div id="emailWrapper">
+        <label for="email">Your email *</label>
+        <input id="email" type="email" placeholder="you@example.com" />
+      </div>
+
+      <div id="soundcloudProfileWrapper" style="display:none;">
+        <label for="soundcloudProfileUrl">Your SoundCloud profile URL *</label>
+        <input id="soundcloudProfileUrl" type="url" placeholder="https://soundcloud.com/yourname" />
+      </div>
 
       <label for="instagramHandle">Instagram Handle</label>
       <input id="instagramHandle" type="text" placeholder="@yourhandle" />
@@ -121,6 +130,7 @@
     const supabaseUrl = "https://rpfoydkxloozkirwgjcm.supabase.co";
     const supabaseAnonKey = "sb_publishable_DhYH1BWEuY95SoP2TUUN4g_xj_BWcy_";
     const client = supabase.createClient(supabaseUrl, supabaseAnonKey);
+    const validateRepostUrl = "https://<YOUR_PROJECT>.functions.supabase.co/validate-soundcloud-repost";
 
     const urlParams = new URLSearchParams(window.location.search);
     const trackId = urlParams.get("track_id");
@@ -128,10 +138,32 @@
     const messageEl = document.getElementById("message");
     const trackInfoEl = document.getElementById("trackInfo");
     const form = document.getElementById("downloadForm");
+    const repostNotice = document.getElementById("repostNotice");
+    const emailWrapper = document.getElementById("emailWrapper");
+    const soundcloudProfileWrapper = document.getElementById("soundcloudProfileWrapper");
+    const emailInput = document.getElementById("email");
+    const soundcloudProfileInput = document.getElementById("soundcloudProfileUrl");
 
     if (!trackId) {
       trackInfoEl.textContent = "Track not found.";
       form.style.display = "none";
+    }
+
+    function setGateMode(repostRequired) {
+      if (repostRequired) {
+        repostNotice.textContent = "This track requires a SoundCloud repost instead of email collection.";
+        repostNotice.style.display = "block";
+        emailWrapper.style.display = "none";
+        soundcloudProfileWrapper.style.display = "block";
+        emailInput.required = false;
+        soundcloudProfileInput.required = true;
+      } else {
+        repostNotice.style.display = "none";
+        emailWrapper.style.display = "block";
+        soundcloudProfileWrapper.style.display = "none";
+        emailInput.required = true;
+        soundcloudProfileInput.required = false;
+      }
     }
 
     async function fetchTrack() {
@@ -147,17 +179,8 @@
         return null;
       }
 
+      setGateMode(!!data.soundcloud_url);
       return data;
-    }
-
-    function buildDropboxDownloadUrl(dropboxUrl) {
-      if (dropboxUrl.includes("dl=0")) {
-        return dropboxUrl.replace("dl=0", "dl=1");
-      }
-      if (dropboxUrl.includes("www.dropbox.com")) {
-        return dropboxUrl.replace("www.dropbox.com", "dl.dropboxusercontent.com");
-      }
-      return dropboxUrl;
     }
 
     form.addEventListener("submit", async (event) => {
@@ -165,28 +188,60 @@
       messageEl.textContent = "";
       messageEl.className = "error";
 
-      const email = document.getElementById("email").value.trim();
+      const email = emailInput.value.trim();
+      const soundcloudProfileUrl = soundcloudProfileInput.value.trim();
       const instagramHandle = document.getElementById("instagramHandle").value.trim();
       const tiktokHandle = document.getElementById("tiktokHandle").value.trim();
-
-      if (!email) {
-        messageEl.textContent = "Please enter your email.";
-        return;
-      }
 
       const track = await fetchTrack();
       if (!track) return;
 
-      const { error: saveError } = await client.from("downloads").insert({
-        track_id: trackId,
-        email,
-        instagram_handle: instagramHandle,
-        tiktok_handle: tiktokHandle
-      });
+      if (track.soundcloud_url) {
+        if (!soundcloudProfileUrl) {
+          messageEl.textContent = "Please enter your SoundCloud profile URL.";
+          return;
+        }
 
-      if (saveError) {
-        messageEl.textContent = "Unable to register download. Try again later.";
-        return;
+        messageEl.textContent = "Validating SoundCloud repost...";
+        const response = await fetch(validateRepostUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            track_url: track.soundcloud_url,
+            soundcloud_profile_url: soundcloudProfileUrl
+          })
+        });
+
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          messageEl.textContent = body.message || "Unable to verify SoundCloud repost.";
+          return;
+        }
+
+        const result = await response.json();
+        if (!result.reposted) {
+          messageEl.textContent = "Please repost the SoundCloud track before downloading.";
+          return;
+        }
+      } else {
+        if (!email) {
+          messageEl.textContent = "Please enter your email.";
+          return;
+        }
+
+        const { error: saveError } = await client.from("downloads").insert({
+          track_id: trackId,
+          email,
+          instagram_handle: instagramHandle,
+          tiktok_handle: tiktokHandle
+        });
+
+        if (saveError) {
+          messageEl.textContent = "Unable to register download. Try again later.";
+          return;
+        }
       }
 
       const downloadUrl = buildDropboxDownloadUrl(track.dropbox_url);
@@ -206,6 +261,16 @@
       if (!track) return;
       trackInfoEl.textContent = `${track.track_title} — ${track.genre || "No genre specified"}`;
     });
+
+    function buildDropboxDownloadUrl(dropboxUrl) {
+      if (dropboxUrl.includes("dl=0")) {
+        return dropboxUrl.replace("dl=0", "dl=1");
+      }
+      if (dropboxUrl.includes("www.dropbox.com")) {
+        return dropboxUrl.replace("www.dropbox.com", "dl.dropboxusercontent.com");
+      }
+      return dropboxUrl;
+    }
   </script>
 </body>
 </html>
