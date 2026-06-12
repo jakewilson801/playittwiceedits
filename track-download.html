@@ -133,7 +133,7 @@
     const soundcloudClientId = "KUCnjgzaLGQ27UcTymXuQvEQD8cBHV0I";
     const redirectUri = `${window.location.origin}/soundcloud-callback.html`;
     const soundcloudAuthUrl = "https://rpfoydkxloozkirwgjcm.supabase.co/functions/v1/soundcloud_auth";
-    const soundcloudRepostUrl = "https://rpfoydkxloozkirwgjcm.supabase.co/functions/v1/soundcloud_repost";
+    const soundcloudGateUrl = "https://rpfoydkxloozkirwgjcm.supabase.co/functions/v1/soundcloud_repost";
     const storageKey = "soundcloud_access_token";
     const codeVerifierStorageKey = "soundcloud_code_verifier";
 
@@ -150,15 +150,16 @@
     const soundcloudStatus = document.getElementById("soundcloudStatus");
     const emailInput = document.getElementById("email");
     let soundcloudAccessToken = sessionStorage.getItem(storageKey);
+    let currentTrack = null;
 
     if (!trackId) {
       trackInfoEl.textContent = "Track not found.";
       form.style.display = "none";
     }
 
-    function setGateMode(repostRequired) {
-      if (repostRequired) {
-        repostNotice.textContent = "This track requires a SoundCloud repost instead of email collection.";
+    function setGateMode(soundcloudRequired) {
+      if (soundcloudRequired) {
+        repostNotice.textContent = "This track requires a SoundCloud repost and like instead of email collection.";
         repostNotice.style.display = "block";
         emailWrapper.style.display = "none";
         soundcloudAuthWrapper.style.display = "block";
@@ -200,15 +201,23 @@
 
     function updateAuthStatus() {
       if (soundcloudAccessToken) {
-        soundcloudStatus.textContent = "Signed in with SoundCloud. Ready to verify repost.";
+        soundcloudStatus.textContent = "Signed in with SoundCloud. Ready to verify repost and like.";
       } else {
-        soundcloudStatus.textContent = "Sign in with SoundCloud to verify a repost.";
+        soundcloudStatus.textContent = "Sign in with SoundCloud to verify a repost and like.";
       }
     }
 
     authButton.addEventListener("click", async () => {
       window.location.href = await getSoundCloudConnectUrl();
     });
+
+    async function autoStartAuthIfNeeded(track) {
+      if (track?.soundcloud_url && !soundcloudAccessToken) {
+        messageEl.className = "success";
+        messageEl.textContent = "Redirecting to SoundCloud sign in...";
+        window.location.href = await getSoundCloudConnectUrl();
+      }
+    }
 
     async function fetchTrack() {
       const { data, error } = await client
@@ -223,17 +232,18 @@
         return null;
       }
 
+      currentTrack = data;
       setGateMode(!!data.soundcloud_url);
       updateAuthStatus();
       return data;
     }
 
-    async function verifyRepost(track) {
+    async function verifySoundCloudGate(track) {
       if (!soundcloudAccessToken) {
         return { success: false, message: "Please sign in with SoundCloud first." };
       }
 
-      const response = await fetch(soundcloudRepostUrl, {
+      const response = await fetch(soundcloudGateUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -254,11 +264,13 @@
           updateAuthStatus();
           return { success: false, message: "SoundCloud session expired. Please sign in again." };
         }
-        return { success: false, message: body.message || "Unable to verify SoundCloud repost." };
+        return { success: false, message: body.message || "Unable to verify SoundCloud repost and like." };
       }
 
       const result = await response.json();
-      return { success: result.reposted, message: result.reposted ? "" : "Please repost the SoundCloud track before downloading." };
+      const success = result.reposted && result.liked;
+      const message = success ? "" : "Please repost and like the SoundCloud track before downloading.";
+      return { success, message };
     }
 
     form.addEventListener("submit", async (event) => {
@@ -274,13 +286,18 @@
       if (!track) return;
 
       if (track.soundcloud_url) {
-        const result = await verifyRepost(track);
+        if (!soundcloudAccessToken) {
+          messageEl.textContent = "Please sign in with SoundCloud first.";
+          return;
+        }
+
+        const result = await verifySoundCloudGate(track);
         if (!result.success) {
           messageEl.textContent = result.message;
           return;
         }
         messageEl.className = "success";
-        messageEl.textContent = result.message || "SoundCloud repost verified. Download ready.";
+        messageEl.textContent = result.message || "SoundCloud repost and like verified. Download ready.";
       } else {
         if (!email) {
           messageEl.textContent = "Please enter your email.";
@@ -315,9 +332,10 @@
       form.remove();
     });
 
-    fetchTrack().then((track) => {
+    fetchTrack().then(async (track) => {
       if (!track) return;
       trackInfoEl.textContent = `${track.track_title} — ${track.genre || "No genre specified"}`;
+      await autoStartAuthIfNeeded(track);
     });
 
     function buildDropboxDownloadUrl(dropboxUrl) {

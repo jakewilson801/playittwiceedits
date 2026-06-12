@@ -7,7 +7,7 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey"
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
   }
@@ -32,9 +32,11 @@ serve(async (req) => {
     }
 
     const reposted = await checkUserRepost(trackId, access_token);
-    return new Response(JSON.stringify({ reposted }), { status: 200, headers: CORS_HEADERS });
+    const liked = await checkUserLike(trackId, access_token);
+    return new Response(JSON.stringify({ reposted, liked }), { status: 200, headers: CORS_HEADERS });
   } catch (error) {
-    return new Response(JSON.stringify({ message: error.message || "Unable to validate repost." }), { status: 500, headers: CORS_HEADERS });
+    const message = error instanceof Error ? error.message : "Unable to validate repost and like.";
+    return new Response(JSON.stringify({ message }), { status: 500, headers: CORS_HEADERS });
   }
 });
 
@@ -60,8 +62,16 @@ async function resolveSoundCloudUrl(url: string, accessToken: string) {
 }
 
 async function checkUserRepost(trackId: string, accessToken: string) {
+  return checkSoundCloudPost(trackId, accessToken, "reposts");
+}
+
+async function checkUserLike(trackId: string, accessToken: string) {
+  return checkSoundCloudPost(trackId, accessToken, "likes");
+}
+
+async function checkSoundCloudPost(trackId: string, accessToken: string, type: "reposts" | "likes") {
   const trackUrn = `soundcloud:tracks:${trackId}`;
-  const response = await fetch(`https://api.soundcloud.com/reposts/tracks/${encodeURIComponent(trackUrn)}`, {
+  const response = await fetch(`https://api.soundcloud.com/${type}/tracks/${encodeURIComponent(trackUrn)}`, {
     method: "POST",
     headers: {
       "Accept": "application/json; charset=utf-8",
@@ -82,5 +92,5 @@ async function checkUserRepost(trackId: string, accessToken: string) {
   }
 
   const text = await response.text().catch(() => "");
-  throw new Error(`Unable to repost track on SoundCloud. (${response.status}) ${text}`);
+  throw new Error(`Unable to ${type.slice(0, -1)} track on SoundCloud. (${response.status}) ${text}`);
 }
