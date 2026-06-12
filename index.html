@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Play It Twice Records</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #0b0b0b;
+      color: #f5f5f5;
+      line-height: 1.5;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .page {
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .nav {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 0;
+    }
+
+    .logo {
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      font-size: 22px;
+    }
+
+    .nav a {
+      opacity: 0.8;
+      font-size: 14px;
+    }
+
+    .hero {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 90px 0 70px;
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 48px;
+      align-items: center;
+    }
+
+    .eyebrow {
+      color: #b6ff4a;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-weight: 700;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      font-size: clamp(48px, 8vw, 92px);
+      line-height: 0.92;
+      letter-spacing: -0.07em;
+      margin: 0 0 24px;
+    }
+
+    .hero p {
+      font-size: 20px;
+      max-width: 560px;
+      color: #cfcfcf;
+      margin-bottom: 32px;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .button {
+      display: inline-block;
+      padding: 14px 20px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .primary {
+      background: #f5f5f5;
+      color: #0b0b0b;
+    }
+
+    .secondary {
+      border: 1px solid #444;
+      color: #f5f5f5;
+    }
+
+    .card {
+      border: 1px solid #242424;
+      background: linear-gradient(180deg, #171717, #101010);
+      border-radius: 28px;
+      padding: 28px;
+      box-shadow: 0 20px 80px rgba(0,0,0,0.35);
+    }
+
+    .card h2 {
+      margin-top: 0;
+      font-size: 28px;
+      letter-spacing: -0.04em;
+    }
+
+    .track {
+      padding: 16px 0;
+      border-bottom: 1px solid #272727;
+    }
+
+    .track:last-child {
+      border-bottom: 0;
+    }
+
+    .track-title {
+      font-weight: 800;
+    }
+
+    .track-artist {
+      color: #aaa;
+      font-size: 14px;
+    }
+
+    .section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 54px 0;
+      border-top: 1px solid #202020;
+    }
+
+    .section h2 {
+      font-size: clamp(32px, 5vw, 56px);
+      letter-spacing: -0.06em;
+      line-height: 1;
+      margin: 0 0 18px;
+    }
+
+    .section p {
+      color: #cfcfcf;
+      font-size: 18px;
+      max-width: 680px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      margin-top: 32px;
+    }
+
+    .feature {
+      border: 1px solid #242424;
+      border-radius: 22px;
+      padding: 22px;
+      background: #111;
+    }
+
+    .feature strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 18px;
+    }
+
+    .feature span {
+      color: #aaa;
+      font-size: 15px;
+    }
+
+    footer {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 0 20px;
+      color: #777;
+      font-size: 14px;
+      border-top: 1px solid #202020;
+    }
+
+    @media (max-width: 800px) {
+      .hero {
+        grid-template-columns: 1fr;
+        padding: 60px 0;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .nav {
+        align-items: flex-start;
+        gap: 16px;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+    <nav class="nav">
+      <div class="logo">Play It Twice Records</div>
+      <a href="#submit">Submit Music</a>
+    </nav>
+
+    <main class="hero">
+      <section>
+        <div class="eyebrow">Community Record Pool</div>
+        <h1>Music worth playing twice.</h1>
+        <p>
+          A community-driven pool for DJs and producers sharing fresh tracks,
+          exclusive edits, unreleased records, and hidden gems.
+        </p>
+
+        <div class="buttons">
+          <a class="button primary" href="#tracks">Browse Tracks</a>
+          <a class="button secondary" href="#submit">Submit Music</a>
+        </div>
+      </section>
+
+      <aside class="card" id="tracks">
+        <h2>Latest Tracks</h2>
+
+        <div class="track">
+          <div class="track-title">Track Title</div>
+          <div class="track-artist">Artist Name</div>
+        </div>
+
+        <div class="track">
+          <div class="track-title">Track Title</div>
+          <div class="track-artist">Artist Name</div>
+        </div>
+
+        <div class="track">
+          <div class="track-title">Track Title</div>
+          <div class="track-artist">Artist Name</div>
+        </div>
+      </aside>
+    </main>
+
+    <section class="section">
+      <h2>Built for DJs, not algorithms.</h2>
+      <p>
+        Discover records directly from artists and selectors inside the
+        Play It Twice community.
+      </p>
+
+      <div class="grid">
+        <div class="feature">
+          <strong>Fresh Music</strong>
+          <span>Find edits, promos, bootlegs, and unreleased tracks.</span>
+        </div>
+
+        <div class="feature">
+          <strong>Community First</strong>
+          <span>Connect with DJs and producers sharing records directly.</span>
+        </div>
+
+        <div class="feature">
+          <strong>Play It Twice</strong>
+          <span>Share tracks that deserve more than one spin.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="submit">
+      <h2>Submit a record.</h2>
+      <p>
+        Got something worth playing? Share your track with the community.
+      </p>
+
+      <div class="buttons">
+        <a class="button primary" href="mailto:playittwicerecords@gmail.com">
+          Submit Music
+        </a>
+        <a class="button secondary" href="https://instagram.com/playittwicerecords" target="_blank">
+          Follow on Instagram
+        </a>
+      </div>
+    </section>
+
+    <footer>
+      © 2026 Play It Twice Records. Discover. Share. Repeat.
+    </footer>
+  </div>
+</body>
+</html>
