@@ -191,10 +191,10 @@
     }
 
     async function getSoundCloudConnectUrl() {
-      const state = encodeURIComponent(btoa(JSON.stringify({ returnTo: window.location.href })));
       const verifier = await generateCodeVerifier();
       sessionStorage.setItem(codeVerifierStorageKey, verifier);
       const challenge = await generateCodeChallenge(verifier);
+      const state = encodeURIComponent(btoa(JSON.stringify({ returnTo: window.location.href, code_verifier: verifier })));
       return `https://secure.soundcloud.com/authorize?client_id=${encodeURIComponent(soundcloudClientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&code_challenge=${encodeURIComponent(challenge)}&code_challenge_method=S256&state=${state}`;
     }
 

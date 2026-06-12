@@ -38,10 +38,15 @@
 
     const supabaseAnonKey = "sb_publishable_DhYH1BWEuY95SoP2TUUN4g_xj_BWcy_";
 
-    async function finishSignIn(code, returnTo) {
+    async function finishSignIn(code, returnTo, stateData) {
       try {
         const redirectUri = window.location.origin + "/soundcloud-callback.html";
-        const codeVerifier = sessionStorage.getItem(codeVerifierStorageKey);
+        let codeVerifier = sessionStorage.getItem(codeVerifierStorageKey);
+        if (!codeVerifier && stateData?.code_verifier) {
+          codeVerifier = stateData.code_verifier;
+          sessionStorage.setItem(codeVerifierStorageKey, codeVerifier);
+        }
+
         debugEl.textContent = `Debug:\ncode=${code}\nredirect_uri=${redirectUri}\ncode_verifier=${codeVerifier ? "present" : "missing"}\n`;
 
         if (!codeVerifier) {
@@ -95,7 +100,7 @@
     } else {
       const decoded = state ? decodeState(state) : {};
       const returnTo = decoded.returnTo || "/";
-      finishSignIn(code, returnTo);
+      finishSignIn(code, returnTo, decoded);
     }
   </script>
 </body>
