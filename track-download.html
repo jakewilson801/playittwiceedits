@@ -107,9 +107,9 @@
         <input id="email" type="email" placeholder="you@example.com" />
       </div>
 
-      <div id="soundcloudProfileWrapper" style="display:none;">
-        <label for="soundcloudProfileUrl">Your SoundCloud profile URL *</label>
-        <input id="soundcloudProfileUrl" type="url" placeholder="https://soundcloud.com/yourname" />
+      <div id="soundcloudAuth" style="display:none; margin-bottom: 18px;">
+        <button id="soundcloudLoginButton" type="button">Sign in with SoundCloud</button>
+        <div id="soundcloudStatus" style="margin-top: 12px; font-size: 14px; color: #b6ff4a;"></div>
       </div>
 
       <label for="instagramHandle">Instagram Handle</label>
@@ -130,7 +130,11 @@
     const supabaseUrl = "https://rpfoydkxloozkirwgjcm.supabase.co";
     const supabaseAnonKey = "sb_publishable_DhYH1BWEuY95SoP2TUUN4g_xj_BWcy_";
     const client = supabase.createClient(supabaseUrl, supabaseAnonKey);
-    const validateRepostUrl = "https://rpfoydkxloozkirwgjcm.supabase.co/functions/v1/soundcloud_repost";
+    const soundcloudClientId = "KUCnjgzaLGQ27UcTymXuQvEQD8cBHV0I";
+    const redirectUri = `${window.location.origin}/soundcloud-callback.html`;
+    const soundcloudAuthUrl = "https://<YOUR_PROJECT>.functions.supabase.co/soundcloud_auth";
+    const soundcloudRepostUrl = "https://<YOUR_PROJECT>.functions.supabase.co/soundcloud_repost";
+    const storageKey = "soundcloud_access_token";
 
     const urlParams = new URLSearchParams(window.location.search);
     const trackId = urlParams.get("track_id");
@@ -140,9 +144,11 @@
     const form = document.getElementById("downloadForm");
     const repostNotice = document.getElementById("repostNotice");
     const emailWrapper = document.getElementById("emailWrapper");
-    const soundcloudProfileWrapper = document.getElementById("soundcloudProfileWrapper");
+    const soundcloudAuthWrapper = document.getElementById("soundcloudAuth");
+    const authButton = document.getElementById("soundcloudLoginButton");
+    const soundcloudStatus = document.getElementById("soundcloudStatus");
     const emailInput = document.getElementById("email");
-    const soundcloudProfileInput = document.getElementById("soundcloudProfileUrl");
+    let soundcloudAccessToken = sessionStorage.getItem(storageKey);
 
     if (!trackId) {
       trackInfoEl.textContent = "Track not found.";
@@ -154,17 +160,32 @@
         repostNotice.textContent = "This track requires a SoundCloud repost instead of email collection.";
         repostNotice.style.display = "block";
         emailWrapper.style.display = "none";
-        soundcloudProfileWrapper.style.display = "block";
+        soundcloudAuthWrapper.style.display = "block";
         emailInput.required = false;
-        soundcloudProfileInput.required = true;
       } else {
         repostNotice.style.display = "none";
         emailWrapper.style.display = "block";
-        soundcloudProfileWrapper.style.display = "none";
+        soundcloudAuthWrapper.style.display = "none";
         emailInput.required = true;
-        soundcloudProfileInput.required = false;
       }
     }
+
+    function getSoundCloudConnectUrl() {
+      const state = encodeURIComponent(btoa(JSON.stringify({ returnTo: window.location.href })));
+      return `https://soundcloud.com/connect?client_id=${encodeURIComponent(soundcloudClientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=non-expiring&state=${state}`;
+    }
+
+    function updateAuthStatus() {
+      if (soundcloudAccessToken) {
+        soundcloudStatus.textContent = "Signed in with SoundCloud. Ready to verify repost.";
+      } else {
+        soundcloudStatus.textContent = "Sign in with SoundCloud to verify a repost.";
+      }
+    }
+
+    authButton.addEventListener("click", () => {
+      window.location.href = getSoundCloudConnectUrl();
+    });
 
     async function fetchTrack() {
       const { data, error } = await client
@@ -180,7 +201,39 @@
       }
 
       setGateMode(!!data.soundcloud_url);
+      updateAuthStatus();
       return data;
+    }
+
+    async function verifyRepost(track) {
+      if (!soundcloudAccessToken) {
+        return { success: false, message: "Please sign in with SoundCloud first." };
+      }
+
+      const response = await fetch(soundcloudRepostUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          track_url: track.soundcloud_url,
+          access_token: soundcloudAccessToken
+        })
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          sessionStorage.removeItem(storageKey);
+          soundcloudAccessToken = null;
+          updateAuthStatus();
+          return { success: false, message: "SoundCloud session expired. Please sign in again." };
+        }
+        return { success: false, message: body.message || "Unable to verify SoundCloud repost." };
+      }
+
+      const result = await response.json();
+      return { success: result.reposted, message: result.reposted ? "" : "Please repost the SoundCloud track before downloading." };
     }
 
     form.addEventListener("submit", async (event) => {
@@ -189,7 +242,6 @@
       messageEl.className = "error";
 
       const email = emailInput.value.trim();
-      const soundcloudProfileUrl = soundcloudProfileInput.value.trim();
       const instagramHandle = document.getElementById("instagramHandle").value.trim();
       const tiktokHandle = document.getElementById("tiktokHandle").value.trim();
 
@@ -197,32 +249,9 @@
       if (!track) return;
 
       if (track.soundcloud_url) {
-        if (!soundcloudProfileUrl) {
-          messageEl.textContent = "Please enter your SoundCloud profile URL.";
-          return;
-        }
-
-        messageEl.textContent = "Validating SoundCloud repost...";
-        const response = await fetch(validateRepostUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            track_url: track.soundcloud_url,
-            soundcloud_profile_url: soundcloudProfileUrl
-          })
-        });
-
-        if (!response.ok) {
-          const body = await response.json().catch(() => ({}));
-          messageEl.textContent = body.message || "Unable to verify SoundCloud repost.";
-          return;
-        }
-
-        const result = await response.json();
-        if (!result.reposted) {
-          messageEl.textContent = "Please repost the SoundCloud track before downloading.";
+        const result = await verifyRepost(track);
+        if (!result.success) {
+          messageEl.textContent = result.message;
           return;
         }
       } else {
