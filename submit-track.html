@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Submit Track | Play It Twice Records</title>
+  <title>Upload Edit | Play It Twice Records</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -115,7 +115,7 @@
       <label for="soundcloudUrl">SoundCloud URL</label>
       <input id="soundcloudUrl" type="url" placeholder="https://soundcloud.com/..." />
 
-      <button id="submitButton" type="submit">Submit Track</button>
+      <button id="submitButton" type="submit">Upload Edit</button>
       <div id="errorMessage" class="error"></div>
     </form>
 
@@ -172,7 +172,7 @@
       } catch (error) {
         errorMessage.textContent = error.message;
         submitButton.disabled = false;
-        submitButton.textContent = "Submit Track";
+        submitButton.textContent = "Upload Edit";
       }
     });
   </script>
