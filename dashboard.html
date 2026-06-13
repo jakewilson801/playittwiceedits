@@ -103,6 +103,49 @@
       margin-top: 12px;
     }
 
+    .track-list-container {
+      margin: 24px 0 0;
+    }
+
+    .track-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .track-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border: 1px solid #2b2b2b;
+      border-radius: 16px;
+      background: #111;
+    }
+
+    .track-item button {
+      border: 1px solid #444;
+      background: transparent;
+      color: #f5f5f5;
+      padding: 10px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .track-item button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    .track-item-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     .message {
       min-height: 24px;
       font-size: 14px;
@@ -149,6 +192,12 @@
         <p id="email">Loading...</p>
         <p id="artistName"></p>
         <div id="trackSummary" class="message"></div>
+        <div id="trackListContainer" class="track-list-container">
+          <h3>Your uploaded tracks</h3>
+          <div id="trackList" class="track-list">
+            Loading tracks...
+          </div>
+        </div>
         <div id="message" class="message"></div>
 
         <a id="profile-button" class="button" href="/setup-profile.html">
@@ -181,6 +230,61 @@
     const logoutButton = document.getElementById("logout-button");
     const profileButton = document.getElementById("profile-button");
     const dashboardCopy = document.getElementById("dashboard-copy");
+    const trackSummary = document.getElementById("trackSummary");
+    const trackList = document.getElementById("trackList");
+
+    function renderTrackList(tracks) {
+      if (!trackList) return;
+      trackList.innerHTML = "";
+
+      if (!tracks || tracks.length === 0) {
+        trackList.textContent = "No tracks uploaded yet.";
+        return;
+      }
+
+      tracks.forEach((track) => {
+        const trackLink = track.id
+          ? `https://playittwicerecs.com/track-download.html?track_id=${track.id}`
+          : "";
+        const item = document.createElement("div");
+        item.className = "track-item";
+
+        const title = document.createElement("a");
+        title.className = "track-item-title";
+        title.href = trackLink || "#";
+        title.textContent = track.track_title || "Untitled track";
+        if (trackLink) {
+          title.target = "_blank";
+          title.rel = "noreferrer noopener";
+        }
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = trackLink ? "Copy Link" : "No Link";
+        button.disabled = !trackLink;
+
+        if (trackLink) {
+          button.addEventListener("click", async () => {
+            try {
+              await navigator.clipboard.writeText(trackLink);
+              button.textContent = "Copied!";
+              setTimeout(() => {
+                button.textContent = "Copy Link";
+              }, 1300);
+            } catch (copyError) {
+              console.error(copyError);
+              button.textContent = "Copy failed";
+              setTimeout(() => {
+                button.textContent = "Copy Link";
+              }, 1300);
+            }
+          });
+        }
+
+        item.append(title, button);
+        trackList.append(item);
+      });
+    }
 
     async function loadDashboard() {
       const {
@@ -221,7 +325,7 @@
 
       const { data: tracks, error: tracksError } = await supabaseClient
         .from("tracks")
-        .select("track_title")
+        .select("id, track_title")
         .eq("user_id", user.id);
 
       if (tracksError) {
@@ -234,6 +338,8 @@
           ? `You’ve submitted ${count} track${count === 1 ? "" : "s"}.`
           : "You haven’t submitted any tracks yet.";
       }
+
+      renderTrackList(tracks);
 
       if (!profile) {
         if (messageEl) {
