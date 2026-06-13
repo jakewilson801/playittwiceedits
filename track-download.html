@@ -245,11 +245,11 @@
     async function fetchSoundCloudArtwork(soundcloudUrl) {
       if (!soundcloudUrl) return null;
       try {
-        const resolveUrl = `https://api.soundcloud.com/resolve?url=${encodeURIComponent(soundcloudUrl)}&client_id=${soundcloudClientId}`;
-        const response = await fetch(resolveUrl);
+        const oEmbedUrl = `https://soundcloud.com/oembed?format=json&url=${encodeURIComponent(soundcloudUrl)}`;
+        const response = await fetch(oEmbedUrl);
         if (!response.ok) return null;
         const data = await response.json();
-        const artworkUrl = data.artwork_url || data.user?.avatar_url;
+        const artworkUrl = data?.thumbnail_url;
         if (!artworkUrl) return null;
         return artworkUrl.replace(/-large\.(jpg|png|gif)$/i, "-t500x500.$1");
       } catch (error) {
