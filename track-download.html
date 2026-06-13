@@ -84,6 +84,15 @@
       font-size: 14px;
     }
 
+    .track-artwork {
+      width: 100%;
+      max-height: 360px;
+      border-radius: 18px;
+      object-fit: cover;
+      margin-bottom: 20px;
+      display: none;
+    }
+
     .meta-link {
       display: inline-block;
       margin-top: 20px;
@@ -97,6 +106,7 @@
 <body>
   <main class="card">
     <h1>Unlock the download</h1>
+    <img id="trackArtwork" class="track-artwork" src="" alt="Track artwork" />
     <p id="trackInfo">Loading track details...</p>
 
     <form id="downloadForm">
@@ -143,6 +153,7 @@
     const isSoundCloudReturn = urlParams.get("soundcloud_return") === "1";
 
     const messageEl = document.getElementById("message");
+    const trackArtworkEl = document.getElementById("trackArtwork");
     const trackInfoEl = document.getElementById("trackInfo");
     const form = document.getElementById("downloadForm");
     const repostNotice = document.getElementById("repostNotice");
@@ -218,6 +229,35 @@
       primaryAction.textContent = currentTrack?.soundcloud_url ? "Like + repost on SoundCloud" : "Get Download Link";
     }
 
+    function setTrackArtwork(url) {
+      if (!trackArtworkEl) return;
+      if (!url) {
+        trackArtworkEl.style.display = "none";
+        trackArtworkEl.src = "";
+        trackArtworkEl.alt = "";
+        return;
+      }
+      trackArtworkEl.style.display = "block";
+      trackArtworkEl.src = url;
+      trackArtworkEl.alt = currentTrack?.track_title ? `Artwork for ${currentTrack.track_title}` : "Track artwork";
+    }
+
+    async function fetchSoundCloudArtwork(soundcloudUrl) {
+      if (!soundcloudUrl) return null;
+      try {
+        const resolveUrl = `https://api.soundcloud.com/resolve?url=${encodeURIComponent(soundcloudUrl)}&client_id=${soundcloudClientId}`;
+        const response = await fetch(resolveUrl);
+        if (!response.ok) return null;
+        const data = await response.json();
+        const artworkUrl = data.artwork_url || data.user?.avatar_url;
+        if (!artworkUrl) return null;
+        return artworkUrl.replace(/-large\.(jpg|png|gif)$/i, "-t500x500.$1");
+      } catch (error) {
+        console.error("SoundCloud artwork fetch failed", error);
+        return null;
+      }
+    }
+
     function renderGateMode(soundcloudRequired) {
       const artistText = currentTrack?.artist_name ? `${currentTrack.track_title} — ${currentTrack.artist_name}` : currentTrack?.track_title || "Loading track details...";
       trackInfoEl.textContent = artistText;
@@ -263,6 +303,12 @@
         .maybeSingle();
 
       currentTrack = { ...data, artist_name: profile?.artist_name || "Unknown artist" };
+      if (currentTrack.soundcloud_url) {
+        const artworkUrl = await fetchSoundCloudArtwork(currentTrack.soundcloud_url);
+        setTrackArtwork(artworkUrl);
+      } else {
+        setTrackArtwork(null);
+      }
       renderGateMode(!!data.soundcloud_url);
       return currentTrack;
     }
