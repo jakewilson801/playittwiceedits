@@ -85,11 +85,13 @@
     }
 
     .track-artwork {
+      display: block;
       width: 100%;
-      aspect-ratio: 1 / 1;
+      max-width: 100%;
       max-height: 360px;
+      height: auto;
       border-radius: 18px;
-      object-fit: cover;
+      object-fit: contain;
       object-position: center;
       margin-bottom: 20px;
       background: #000;
@@ -247,18 +249,40 @@
 
     async function fetchSoundCloudArtwork(soundcloudUrl) {
       if (!soundcloudUrl) return null;
-      try {
-        const oEmbedUrl = `https://soundcloud.com/oembed?format=json&url=${encodeURIComponent(soundcloudUrl)}`;
+      const normalizedUrl = soundcloudUrl.trim();
+
+      async function fetchOEmbed() {
+        const oEmbedUrl = `https://soundcloud.com/oembed?format=json&url=${encodeURIComponent(normalizedUrl)}`;
         const response = await fetch(oEmbedUrl);
         if (!response.ok) return null;
         const data = await response.json();
-        const artworkUrl = data?.thumbnail_url;
-        if (!artworkUrl) return null;
-        return artworkUrl.replace(/-large\.(jpg|png|gif)$/i, "-t500x500.$1");
-      } catch (error) {
-        console.error("SoundCloud artwork fetch failed", error);
-        return null;
+        const artworkUrl = data.thumbnail_url;
+        return artworkUrl ? artworkUrl.replace(/-large\.(jpg|png|gif)$/i, "-t500x500.$1") : null;
       }
+
+      async function fetchResolvedArtwork() {
+        if (!soundcloudAccessToken) return null;
+        try {
+          const resolveUrl = `https://api.soundcloud.com/resolve?url=${encodeURIComponent(normalizedUrl)}`;
+          const response = await fetch(resolveUrl, {
+            headers: {
+              Accept: "application/json; charset=utf-8",
+              Authorization: `OAuth ${soundcloudAccessToken}`
+            }
+          });
+          if (!response.ok) return null;
+          const data = await response.json();
+          const artworkUrl = data.artwork_url || data.user?.avatar_url;
+          return artworkUrl ? artworkUrl.replace(/-large\.(jpg|png|gif)$/i, "-t500x500.$1") : null;
+        } catch (error) {
+          console.warn("SoundCloud resolve artwork failed", error);
+          return null;
+        }
+      }
+
+      const authArtwork = await fetchResolvedArtwork();
+      if (authArtwork) return authArtwork;
+      return await fetchOEmbed();
     }
 
     function renderGateMode(soundcloudRequired) {
